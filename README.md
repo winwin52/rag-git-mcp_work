@@ -21,16 +21,22 @@
 
 ## 快速开始
 
+> **在 GitHub Codespaces 里运行？** 见 **[CODESPACES.md](CODESPACES.md)** —— 从零开始的完整指令。
+> 一键搭建：`bash setup.sh`
+
 ### 1. 安装依赖
 
 ```bash
+# ★ 先装 CPU 版 torch（避免拉入 4-6 GB 的 CUDA 包）
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# 再装其余
 pip install -r requirements.txt
 ```
 
-> **磁盘紧张时（如 Codespaces）**，先装 CPU 版 torch，避免拉入 4-6 GB 的 CUDA 包：
-> ```bash
-> pip install torch --index-url https://download.pytorch.org/whl/cpu
-> ```
+> 跳过第一步会导致 pip 拉入 CUDA 版 torch + 10 个 `nvidia-*` 包，
+> 在 Codespaces 里足以撑爆磁盘（`Errno 28`）。
+> 本项目用 `bge-small-zh`，**CPU 完全够用**。
 
 ### 2. 配置 API Key
 
@@ -65,7 +71,10 @@ rag-git-mcp_work/
 ├── rag_engine.py         # 核心：检索 + 生成 + 有/无答案判定
 ├── main.py               # 交互式问答入口
 ├── eval.py               # 评测：有答案 / 无答案 / 失败案例
+├── setup.sh              # ★ 一键环境搭建 + 建索引（Codespaces 用）
 ├── requirements.txt
+├── CODESPACES.md         # ★ Codespaces 完整操作指南
+├── DEVLOG.md             # 开发日志（过程记录）
 ├── .env.example          # 密钥示例（.env 已被 gitignore）
 ├── .gitignore
 ├── data/

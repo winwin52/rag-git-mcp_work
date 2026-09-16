@@ -1,0 +1,25 @@
+# 统一换行符，避免 Windows / Linux 协作时的 CRLF 警告
+# 语法： <pattern> <attributes>
+
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.txt  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+
+# 二进制文件：禁止换行符转换
+*.pptx binary
+*.docx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.faiss binary
+*.pkl  binary
