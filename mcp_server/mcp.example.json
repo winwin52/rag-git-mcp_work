@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "MCP 客户端配置模板。",
+    "把 mcpServers 整块合并进你的客户端配置文件：",
+    "  · DSH        : 见 DSH 文档的 MCP 配置位置",
+    "  · Cursor     : ~/.cursor/mcp.json  或项目 .cursor/mcp.json",
+    "  · Claude     : claude_desktop_config.json",
+    "  · VS Code    : .vscode/mcp.json",
+    "",
+    "⚠️ 把 <项目绝对路径> 换成你本机的真实路径。",
+    "⚠️ Windows 路径要用正斜杠或双反斜杠。"
+  ],
+
+  "mcpServers": {
+    "learning-progress": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "<项目绝对路径>/rag-git-mcp_work",
+        "python",
+        "mcp_server/server.py"
+      ],
+      "env": {
+        "DEEPSEEK_API_KEY": "<你的密钥>",
+        "HF_ENDPOINT": "https://hf-mirror.com"
+      }
+    }
+  }
+}

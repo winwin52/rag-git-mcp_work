@@ -1,0 +1,59 @@
+{
+  "_comment": "学习进度数据源。请复制为 progress.json 并按实际情况修改（progress.json 已被 gitignore）",
+  "student": "你的名字",
+  "courses": [
+    {
+      "course": "rag",
+      "title": "检索增强生成（all-in-rag）",
+      "aliases": ["RAG", "检索增强"],
+      "chapters": [
+        {"index": 1, "name": "第1章 解锁RAG", "status": "completed", "percent": 100, "updated_at": "2026-09-01", "note": "RAG简介、准备工作、四步构建"},
+        {"index": 2, "name": "第2章 数据准备", "status": "completed", "percent": 100, "updated_at": "2026-09-02", "note": "数据加载、文本分块"},
+        {"index": 3, "name": "第3章 索引构建", "status": "completed", "percent": 100, "updated_at": "2026-09-03", "note": "向量嵌入、多模态、向量数据库、Milvus、索引优化"},
+        {"index": 4, "name": "第4章 检索优化", "status": "completed", "percent": 100, "updated_at": "2026-09-05", "note": "混合检索、查询构建、Text2SQL、查询重构、检索进阶"},
+        {"index": 5, "name": "第5章 生成集成", "status": "completed", "percent": 100, "updated_at": "2026-09-06", "note": "格式化生成"},
+        {"index": 6, "name": "第6章 RAG系统评估", "status": "completed", "percent": 100, "updated_at": "2026-09-07", "note": "评估方法、常用工具"},
+        {"index": 7, "name": "第7章 高级RAG架构", "status": "completed", "percent": 100, "updated_at": "2026-09-08", "note": "知识图谱RAG、Agentic RAG"},
+        {"index": 8, "name": "第8章 项目实战一", "status": "completed", "percent": 100, "updated_at": "2026-09-12", "note": "尝尝咸淡RAG系统，环境配置到系统整合"},
+        {"index": 9, "name": "第9章 项目实战一优化", "status": "pending", "percent": 0, "updated_at": null, "note": "Graph RAG架构、Milvus索引、查询路由"},
+        {"index": 10, "name": "第10章 项目实战二", "status": "pending", "percent": 0, "updated_at": null, "note": "规划中"}
+      ]
+    },
+    {
+      "course": "git",
+      "title": "Git 版本控制",
+      "aliases": ["版本控制", "gIT"],
+      "chapters": [
+        {"index": 1, "name": "基本配置", "status": "completed", "percent": 100, "updated_at": "2026-09-13", "note": "user.name / user.email 配置"},
+        {"index": 2, "name": "云端仓库", "status": "completed", "percent": 100, "updated_at": "2026-09-13", "note": "GitHub 远程仓库关联"},
+        {"index": 3, "name": "基本推拉", "status": "completed", "percent": 100, "updated_at": "2026-09-13", "note": "push / pull / fetch"},
+        {"index": 4, "name": "合并分支", "status": "completed", "percent": 100, "updated_at": "2026-09-14", "note": "分支创建、合并、冲突处理"},
+        {"index": 5, "name": "IDE 中集成", "status": "completed", "percent": 100, "updated_at": "2026-09-14", "note": "VS Code / Codex 的 Git 管理"}
+      ]
+    },
+    {
+      "course": "mcp",
+      "title": "MCP 模型上下文协议",
+      "aliases": ["Model Context Protocol"],
+      "chapters": [
+        {"index": 1, "name": "MCP 概念", "status": "completed", "percent": 100, "updated_at": "2026-09-15", "note": "Host / Client / Server 角色划分"},
+        {"index": 2, "name": "Cursor 安装与试用", "status": "completed", "percent": 100, "updated_at": "2026-09-15", "note": "客户端配置"},
+        {"index": 3, "name": "MCP 配置方法", "status": "completed", "percent": 100, "updated_at": "2026-09-15", "note": "mcpServers JSON 配置"},
+        {"index": 4, "name": "编写 MCP Server", "status": "in_progress", "percent": 60, "updated_at": "2026-09-16", "note": "FastMCP 写工具，参数校验待完善"},
+        {"index": 5, "name": "在 Agent 中使用", "status": "pending", "percent": 0, "updated_at": null, "note": "接入 LangChain / LangGraph"}
+      ]
+    },
+    {
+      "course": "c语言",
+      "title": "C语言程序设计与应用（课程资料）",
+      "aliases": ["c", "C语言", "C语言程序设计"],
+      "chapters": [
+        {"index": 1, "name": "第1章 C语言开发环境", "status": "completed", "percent": 100, "updated_at": "2026-09-16", "note": "Visual Studio Community 2019 安装"},
+        {"index": 2, "name": "第2章 简单的秒值-时间值转换", "status": "completed", "percent": 100, "updated_at": "2026-09-16", "note": "86400秒，0~86399范围"},
+        {"index": 3, "name": "第3章 基于数组的秒值-时间值转换", "status": "completed", "percent": 100, "updated_at": "2026-09-16", "note": "数组应用"},
+        {"index": 4, "name": "第4章 基于函数的秒值-时间值转换", "status": "completed", "percent": 100, "updated_at": "2026-09-16", "note": "CalcHour/CalcMin/CalcSec 三个函数"},
+        {"index": 5, "name": "第5章 基于枚举的秒值-时间值转换", "status": "pending", "percent": 0, "updated_at": null, "note": "枚举应用"}
+      ]
+    }
+  ]
+}

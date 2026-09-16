@@ -1,0 +1,47 @@
+# ============================================================
+#  C 语言课程 RAG 项目依赖
+#  Python 3.10+（本项目在 3.12.7 上开发）
+#
+#  安装：
+#      pip install -r requirements.txt
+#
+#  ⚠️ 磁盘紧张时（如 GitHub Codespaces），先装 CPU 版 torch：
+#      pip install torch --index-url https://download.pytorch.org/whl/cpu
+#    否则会拉入 4-6 GB 的 nvidia-* CUDA 包，可能是用不上的。
+# ============================================================
+
+# ---------- 核心框架 ----------
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-huggingface>=0.1.0
+langchain-text-splitters>=0.3.0
+
+# ---------- 嵌入模型 ----------
+# CPU 版足够（bge-small 很小），有 GPU 可换 pytorch-cuda 版
+torch>=2.2.0
+sentence-transformers>=3.0.0
+transformers>=4.40.0
+huggingface-hub>=0.23.0
+
+# ---------- 向量库 ----------
+faiss-cpu>=1.7.4
+
+# ---------- LLM 接入 ----------
+langchain-deepseek>=0.1.0
+langchain-openai>=0.2.0
+openai>=1.30.0
+
+# ---------- PPT 预处理 ----------
+python-pptx>=0.6.21
+
+# ---------- 环境与工具 ----------
+python-dotenv>=1.0.0
+tqdm>=4.64.0
+
+# ============================================================
+#  以下为 MCP 阶段使用（做 MCP 任务时再装）
+# ============================================================
+# mcp>=1.0.0
+# langchain-mcp-adapters>=0.1.0
+# langgraph>=0.2.0
