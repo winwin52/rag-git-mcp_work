@@ -280,6 +280,102 @@ v1 跑通后发现三类真实问题，详见 `eval/failure_cases.md`：
 
 ---
 
+## 2026-09-17 · PR 合并与撤销演示
+
+### 完成内容
+
+**1. PR 合并（Git 任务：合并回主分支）**
+
+- 创建 PR #1：`feature/retrieval-improve` → `master`
+- 使用 **Create a merge commit**（保留完整分支历史，非 squash）
+- 合并提交：`81b6509 Merge pull request #1`
+- 10 个提交全部保留，双父结构在 `git log --graph` 中清晰可见
+
+**2. 撤销演示（Git 任务：演示撤销错误提交）**
+
+**故意制造的错误**：
+
+```python
+# config.py
+- top_k: int = 5    # 正确值
++ top_k: int = 1    # 错误：为省 token 降召回数
+```
+
+提交 `ee77f10` 并**推送到远端**（模拟真实场景：错误已经共享出去了）。
+
+**撤销操作**：
+
+```bash
+git revert --no-edit HEAD
+```
+
+**结果**：
+
+```
+f782b50 Revert "tune: 将 top_k 从 5 降到 1，减少上下文长度"
+ee77f10 tune: 将 top_k 从 5 降到 1，减少上下文长度   ← 错误提交仍在历史里
+81b6509 Merge pull request #1 ...
+```
+
+验证：
+```bash
+git diff 81b6509 HEAD -- config.py
+# → 无差异，说明 config.py 已完全恢复到出错前的状态
+```
+
+### 关键决策：为什么用 revert 而不是 reset
+
+| 方案 | 对已推送历史的影响 |
+|---|---|
+| `git reset --hard` + `git push --force` | **改写历史**，队友的本地仓库会与远端冲突 |
+| **`git revert`**（本次采用） | **只增不减**，生成反向提交，所有人正常 `git pull` 即可 |
+
+**因为错误已经 push 了** —— 已共享的历史不应改写，
+否则任何拉取过该提交的人都会遇到冲突。
+
+如果是**未推送的私有提交**，`git reset` 更干净（历史里不留痕迹）。
+
+### 踩过的坑
+
+**坑 6：GitHub 的 Merge 按钮有三个选项，含义不同**
+
+| 选项 | 效果 |
+|---|---|
+| Create a merge commit | 生成双父合并节点，**保留分支历史** ← 本次选用 |
+| Squash and merge | 把多个提交压成 1 个，丢失过程 |
+| Rebase and merge | 逐个重放提交，无合并节点，历史变直线 |
+
+选 merge commit 的原因：作业要演示「创建分支并合并」，
+`squash` 会让分支痕迹消失，看不出这个操作发生过。
+
+### 观察到的现象
+
+`git log --graph` 输出的分叉汇合形状：
+
+```
+*   81b6509 Merge pull request #1
+|\
+| * 6e746bf 分支检索测试结果文档
+| * b88e408 docs: DEVLOG 记录...
+| ...
+|/
+* 9b92cb6 初版测试结果
+```
+
+**`|\` 和 `|/` 就是 merge 的可视化** —— 两条历史线在此汇合。
+
+### 下一步
+
+- [x] 创建功能分支
+- [x] 完成修改
+- [x] 查看差异（PR Files changed 页面）
+- [x] 提交
+- [x] 合并回主分支
+- [x] **演示撤销错误提交**
+- [ ] （可选）v3：Rerank / 余弦相似度 / 扩大语料
+
+---
+
 ## 模板（后续照此记录）
 
 ```markdown
