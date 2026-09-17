@@ -185,9 +185,20 @@ class RAGEngine:
     # ---------------- 检索 ----------------
 
     def retrieve(self, question: str, k: int = None) -> List[RetrievedChunk]:
-        """检索相关片段，带相似度分数"""
+        """
+        检索相关片段，带相似度分数。
+
+        注意：BGE 中文模型是非对称检索训练的 ——
+        「查询」需要加指令前缀，「文档」不加。
+        前缀只作用于检索时的查询编码，不影响文档向量。
+        """
         k = k or self.cfg.top_k
-        pairs = self.vectorstore.similarity_search_with_score(question, k=k)
+
+        # 加查询指令前缀（配置为空则不改动）
+        prefix = getattr(self.cfg, "query_instruction", "") or ""
+        search_query = f"{prefix}{question}" if prefix else question
+
+        pairs = self.vectorstore.similarity_search_with_score(search_query, k=k)
 
         chunks = []
         for doc, score in pairs:
