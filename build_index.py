@@ -93,6 +93,9 @@ def split_documents(cfg, docs):
     )
     chunks = splitter.split_documents(docs)
 
+    # 过滤「文档头万能块」
+    chunks = filter_header_chunks(chunks)
+
     # 给每个块编号，便于调试与引用
     for i, c in enumerate(chunks):
         c.metadata["chunk_id"] = i
@@ -106,6 +109,60 @@ def split_documents(cfg, docs):
               f"平均 {sum(lens)//len(lens)} 字符")
 
     return chunks
+
+
+def filter_header_chunks(chunks):
+    """
+    过滤「文档头万能块」。
+
+    问题背景：
+        Markdown 被切分后，每个文档的第 0 块总是包含
+        「文件名 + source 注释 + 封面页（讲解/编制/邮箱）+ 目录」。
+        这类块与任何问题都「有点像」，导致每次检索它都霸占 top-1，
+        把真正含答案的块挤出去。实测中「一天有多少秒」的 top-3
+        全是各章文档头，而含 86400 的那一页根本没被召回。
+
+    过滤规则（满足任一即丢弃）：
+        1. 含 source 注释、且几乎没有实质内容（短）
+        2. 封面页特征明显（含邮箱/讲解/编制等署名信息）
+
+    注意：只过滤，不修改原文。data_processed/ 下仍保留完整 Markdown。
+    """
+    import re
+
+    # 封面/署名的典型特征
+    COVER_PATTERNS = [
+        r"<!--\s*source:",
+        r"@\w+\.(com|cn|net|org)",
+        r"讲解[:：]", r"编制[:：]",
+        r"——.*系列——",
+    ]
+    cover_re = re.compile("|".join(COVER_PATTERNS))
+
+    kept, dropped = [], []
+    for c in chunks:
+        text = c.page_content.strip()
+
+        # 规则 1：短块 + 含 source 注释 → 文档头
+        if len(text) < 200 and "<!-- source:" in text:
+            dropped.append(text[:40])
+            continue
+
+        # 规则 2：封面特征密集（命中 2 个以上）
+        if len(cover_re.findall(text)) >= 2 and len(text) < 300:
+            dropped.append(text[:40])
+            continue
+
+        kept.append(c)
+
+    if dropped:
+        print(f"过滤文档头块：丢弃 {len(dropped)} 个，保留 {len(kept)} 个")
+        for d in dropped[:5]:
+            print(f"    - 丢弃：{d}...")
+        if len(dropped) > 5:
+            print(f"    - 其余 {len(dropped) - 5} 个省略")
+
+    return kept
 
 
 # ---------------------------------------------------------------- 建索引
