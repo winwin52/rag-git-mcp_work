@@ -113,20 +113,34 @@ def split_documents(cfg, docs):
 
 def filter_header_chunks(chunks):
     """
-    过滤「文档头万能块」。
+    过滤「低信息量的模板化块」。
 
     问题背景：
-        Markdown 被切分后，每个文档的第 0 块总是包含
-        「文件名 + source 注释 + 封面页（讲解/编制/邮箱）+ 目录」。
-        这类块与任何问题都「有点像」，导致每次检索它都霸占 top-1，
-        把真正含答案的块挤出去。实测中「一天有多少秒」的 top-3
-        全是各章文档头，而含 86400 的那一页根本没被召回。
+        5 份讲义是同一门课的系列 PPT，存在两类跨章节重复的模板化内容。
+        它们的向量高度相似、且几乎不含知识点，会抱团霸占检索排名，
+        把真正含答案的块挤出去。
+
+    类型一：文档头万能块
+        每个文档的第 0 块总是「文件名 + source 注释 + 封面页 + 目录」。
+        实测：问「一天有多少秒」，top-3 全是各章文档头，
+        而含 86400 的那一页根本没被召回。
+
+    类型二：本章任务块（v2 新增）
+        每章都有「4.本章任务 任务1：2020年总共有366天…」这一页，
+        5 章内容几乎逐字相同。
+        实测：问「C语言是什么」，top-4 被 4 个不同章节的
+        本章任务块占满（距离 0.7771 / 0.7782 / 0.7816 / 0.7831），
+        它们互相"抱团"挤掉了真正相关的块。
 
     过滤规则（满足任一即丢弃）：
         1. 含 source 注释、且几乎没有实质内容（短）
         2. 封面页特征明显（含邮箱/讲解/编制等署名信息）
+        3. 章节任务页（编号小标题 + 重复的任务模板句）
 
-    注意：只过滤，不修改原文。data_processed/ 下仍保留完整 Markdown。
+    注意：
+        · 只过滤，不修改原文。data_processed/ 下仍保留完整 Markdown。
+        · 习题页（5.本章习题）**不过滤** —— 它含知识点问句
+          （如「为什么要使用函数？」），有检索价值。
     """
     import re
 
@@ -139,28 +153,46 @@ def filter_header_chunks(chunks):
     ]
     cover_re = re.compile("|".join(COVER_PATTERNS))
 
+    # 章节任务页特征（跨章节重复的模板内容）
+    TASK_PATTERNS = [
+        r"###\s*\d+\.\s*本章任务",          # 编号小标题「4.本章任务」
+        r"本章任务\s*任务\d",                # 正文「本章任务 任务1」
+        r"任务1[:：]\s*2020年总共有366天",   # 逐字重复的模板句
+    ]
+    task_re = re.compile("|".join(TASK_PATTERNS))
+
     kept, dropped = [], []
     for c in chunks:
         text = c.page_content.strip()
 
         # 规则 1：短块 + 含 source 注释 → 文档头
         if len(text) < 200 and "<!-- source:" in text:
-            dropped.append(text[:40])
+            dropped.append(("文档头", text[:40]))
             continue
 
         # 规则 2：封面特征密集（命中 2 个以上）
         if len(cover_re.findall(text)) >= 2 and len(text) < 300:
-            dropped.append(text[:40])
+            dropped.append(("封面页", text[:40]))
+            continue
+
+        # 规则 3：章节任务页
+        if task_re.search(text):
+            dropped.append(("任务页", text[:40]))
             continue
 
         kept.append(c)
 
     if dropped:
-        print(f"过滤文档头块：丢弃 {len(dropped)} 个，保留 {len(kept)} 个")
-        for d in dropped[:5]:
-            print(f"    - 丢弃：{d}...")
-        if len(dropped) > 5:
-            print(f"    - 其余 {len(dropped) - 5} 个省略")
+        # 按类型统计
+        from collections import Counter
+        counts = Counter(t for t, _ in dropped)
+        detail = "、".join(f"{k} {v} 个" for k, v in counts.items())
+        print(f"过滤低信息量块：丢弃 {len(dropped)} 个（{detail}），"
+              f"保留 {len(kept)} 个")
+        for typ, d in dropped[:6]:
+            print(f"    - [{typ}] {d}...")
+        if len(dropped) > 6:
+            print(f"    - 其余 {len(dropped) - 6} 个省略")
 
     return kept
 
