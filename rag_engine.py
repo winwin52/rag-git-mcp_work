@@ -43,6 +43,13 @@ class RAGResult:
     found: bool                        # 是否从资料中找到了答案
     chunks: List[RetrievedChunk] = field(default_factory=list)
     refusal_reason: str = ""           # found=False 时的原因
+    # 结局类型，用于精确区分「无答案」和「调用失败」
+    #   answered  —— 成功生成回答
+    #   refused   —— LLM 判定资料不足以回答
+    #   error     —— LLM 调用失败（认证/网络/额度等），与资料无关
+    #   filtered  —— 阈值过滤掉了全部片段
+    #   empty     —— 检索结果为空
+    outcome: str = "answered"
 
     def format(self) -> str:
         """格式化为面向用户的输出"""
@@ -50,41 +57,74 @@ class RAGResult:
         lines.append("=" * 66)
         lines.append(f"问题：{self.question}")
         lines.append("=" * 66)
+        lines.append("")
 
-        if self.found:
+        # ---------- 调用失败：明确指出是系统问题，不是资料问题 ----------
+        if self.outcome == "error":
+            lines.append("【回答】")
+            lines.append(self.answer.strip())
             lines.append("")
+            lines.append("⚠️  这是大模型调用失败，**不代表资料里没有答案**。")
+            lines.append("    请检查 API Key、网络或账户额度后重试。")
+            lines.append("")
+            if self.chunks:
+                lines.append(f"【检索结果】共 {len(self.chunks)} 个片段"
+                             "（未参与判断，仅供参考）：")
+                self._append_chunks(lines)
+            return "\n".join(lines)
+
+        # ---------- 正常有答案 ----------
+        if self.found:
             lines.append("【回答】")
             lines.append(self.answer.strip())
             lines.append("")
             lines.append(f"【依据】检索到 {len(self.chunks)} 个相关片段：")
+            self._append_chunks(lines)
+            return "\n".join(lines)
+
+        # ---------- 无答案（LLM 判定 / 阈值过滤 / 检索为空）----------
+        lines.append("【回答】")
+        lines.append(self.answer.strip())
+        lines.append("")
+        if self.refusal_reason:
+            lines.append(f"（判定原因：{self.refusal_reason}）")
+        lines.append("")
+
+        if self.outcome == "empty":
+            lines.append("【检索结果】知识库中没有检索到任何内容。")
+        elif self.outcome == "filtered":
+            lines.append(f"【检索结果】共 {len(self.chunks)} 个片段，"
+                         "但相似度均未达到阈值：")
+            self._append_chunks(lines)
         else:
-            lines.append("")
-            lines.append("【回答】")
-            lines.append(self.answer.strip())
-            lines.append("")
-            if self.refusal_reason:
-                lines.append(f"（判定原因：{self.refusal_reason}）")
-            lines.append("")
             lines.append(f"【检索到的片段】共 {len(self.chunks)} 个，"
                          "但均与问题不相关：")
+            self._append_chunks(lines)
 
+        return "\n".join(lines)
+
+    def _append_chunks(self, lines: List[str]) -> None:
+        """统一输出检索片段"""
         for i, c in enumerate(self.chunks, 1):
             score_str = f"距离 {c.score:.4f}" if c.score is not None else "—"
             lines.append("")
             lines.append(f"  [{i}] {c.source} / {c.chapter} "
                          f"/ 块#{c.chunk_id} （{score_str}）")
             lines.append(f"      {c.brief(160)}")
-
         lines.append("")
-        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------- Prompt
 
 PROMPT_TEMPLATE = """请根据下面提供的上下文信息来回答问题。
-请确保你的回答完全基于这些上下文，不要使用上下文之外的知识。
-如果上下文中没有足够的信息来回答问题，请直接告知：
-"抱歉，我无法从提供的资料中找到相关信息来回答此问题。"
+
+要求：
+1. 优先使用上下文中的信息作答，不要编造上下文中不存在的内容。
+2. 如果上下文提供了**部分**相关信息，请基于这些信息作答，
+   并明确指出资料中未涵盖的部分 —— 不要因为信息不完整就拒绝回答。
+3. 只有当上下文**完全不涉及**该问题时，才回答：
+   "抱歉，我无法从提供的资料中找到相关信息来回答此问题。"
+4. 回答时尽量引用片段编号（如 [片段1]），便于用户核对出处。
 
 上下文:
 {context}
@@ -145,9 +185,20 @@ class RAGEngine:
     # ---------------- 检索 ----------------
 
     def retrieve(self, question: str, k: int = None) -> List[RetrievedChunk]:
-        """检索相关片段，带相似度分数"""
+        """
+        检索相关片段，带相似度分数。
+
+        注意：BGE 中文模型是非对称检索训练的 ——
+        「查询」需要加指令前缀，「文档」不加。
+        前缀只作用于检索时的查询编码，不影响文档向量。
+        """
         k = k or self.cfg.top_k
-        pairs = self.vectorstore.similarity_search_with_score(question, k=k)
+
+        # 加查询指令前缀（配置为空则不改动）
+        prefix = getattr(self.cfg, "query_instruction", "") or ""
+        search_query = f"{prefix}{question}" if prefix else question
+
+        pairs = self.vectorstore.similarity_search_with_score(search_query, k=k)
 
         chunks = []
         for doc, score in pairs:
@@ -183,14 +234,16 @@ class RAGEngine:
         question = question.strip()
         if not question:
             return RAGResult(question="", answer="问题为空。",
-                             found=False, refusal_reason="空输入")
+                             found=False, refusal_reason="空输入",
+                             outcome="empty")
 
         # ① 检索
         chunks = self.retrieve(question, k=k)
         if not chunks:
             return RAGResult(question=question,
                              answer="抱歉，知识库中没有检索到任何内容。",
-                             found=False, refusal_reason="检索结果为空")
+                             found=False, refusal_reason="检索结果为空",
+                             outcome="empty")
 
         # ① 阈值过滤（可选）
         usable, filter_reason = self._filter_by_threshold(chunks)
@@ -199,6 +252,7 @@ class RAGEngine:
                 question=question,
                 answer="抱歉，我无法从提供的资料中找到相关信息来回答此问题。",
                 found=False, chunks=chunks, refusal_reason=filter_reason,
+                outcome="filtered",
             )
 
         # ② 拼上下文 + Prompt 约束
@@ -213,10 +267,14 @@ class RAGEngine:
             answer = self._get_llm().invoke(prompt)
             answer_text = getattr(answer, "content", str(answer))
         except Exception as e:
+            # ⚠️ 调用失败 ≠ 资料里没有答案
+            #    必须区分开，否则会误导用户以为知识库没内容
             return RAGResult(
                 question=question,
                 answer=f"调用大模型失败：{e}",
-                found=False, chunks=chunks, refusal_reason="LLM 调用异常",
+                found=False, chunks=chunks,
+                refusal_reason="LLM 调用异常（非资料问题）",
+                outcome="error",
             )
 
         # ④ 判定有/无答案
@@ -228,6 +286,7 @@ class RAGEngine:
             found=found,
             chunks=chunks,
             refusal_reason="" if found else "LLM 判定资料不足以回答",
+            outcome="answered" if found else "refused",
         )
 
 
