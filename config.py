@@ -12,6 +12,23 @@ from typing import Any, Dict
 # 项目根目录（本文件所在目录）
 ROOT = Path(__file__).resolve().parent
 
+# ============================================================
+#  加载 .env
+#
+#  必须在读取任何环境变量之前执行。
+#  否则 .env 文件里的密钥不会被 os.getenv() 读到，
+#  用户每次开新终端都得手动 export，很容易忘。
+# ============================================================
+try:
+    from dotenv import load_dotenv
+
+    # override=False：已存在的环境变量优先，不覆盖
+    #   —— 方便临时用 export 覆盖 .env 做调试
+    load_dotenv(ROOT / ".env", override=False)
+except ImportError:
+    # python-dotenv 未安装时降级：只依赖系统环境变量
+    pass
+
 
 @dataclass
 class RAGConfig:
